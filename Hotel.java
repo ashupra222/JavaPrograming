@@ -1,6 +1,25 @@
 import java.util.Scanner;
-
 import java.time.LocalDate;
+
+class Food{
+    String type;
+    int price;
+    LocalDate buyOn;
+    Food(String type){
+        this.type = type;
+        buyOn = LocalDate.now();
+        if(type == "breakfast") price = 50;
+        else if(type == "lunch") price = 100;
+        else if(type == "dinner") price = 200;
+        else {
+            System.out.println("Not a valid food type.");
+            price = 0;
+        }
+    }
+    void generateBill(){
+        System.out.println(type + " on " + buyOn + " price: "+ price);
+    }
+}
 
 class Room{
     int roomNo ;
@@ -13,6 +32,8 @@ class Room{
     int bookedForDays;
     LocalDate checkinDate;
     LocalDate checkoutDate;
+    Food[] foodlist = new Food[2];
+    int foodlistsize = 0;
 
     Room(int rmN,int rateperday, boolean ac, boolean doubleBed, int bedCount){
         this.roomNo = rmN;
@@ -92,13 +113,21 @@ class Room{
         }
     }
     void generateBill(){
+        int foodTotal = 0;
+        for(int i=0; i<foodlistsize;i++){
+            foodTotal += foodlist[i].price;
+        }
         System.out.println("--------------------------------------------");
         System.out.println("Room No. : "+roomNo);
         System.out.println("Booked by: "+ name);
         System.out.println("check-in date: "+ checkinDate);
         System.out.println("check-out date: "+checkoutDate);
         System.out.println("Rent per day : "+rateperday);
-        System.out.println("Total Amount: "+ (bookedForDays * rateperday));
+        for(int i=0; i<foodlistsize;i++){
+            foodlist[i].generateBill();
+        }
+        System.out.println("Total food amount: " + foodTotal);
+        System.out.println("Total Amount: "+ ((bookedForDays * rateperday)+ foodTotal));
         System.out.println("--------------------------------------------");
     }
     void generalCheck(){
@@ -108,6 +137,17 @@ class Room{
                 freeRoom();
             }
         }
+    }
+    void addFood(String type){
+        if (foodlistsize == foodlist.length){
+            Food[] newfoodlist = new Food[foodlist.length + 2];
+            for(int i=0; i<foodlistsize; i++){
+                newfoodlist[i] = foodlist[i];
+            }
+            foodlist = newfoodlist;
+        }
+        foodlist[foodlistsize] = new Food(type);
+        foodlistsize++;
     }
 }
 
@@ -179,13 +219,13 @@ class RoomManager{
                     System.out.println("days to book for: ");
                     days = sc1.nextInt();
                     do{
-                        System.out.print("Amount to pay is "+(rooms[i].rateperday * days)+"Rs. : ");
+                        System.out.print("Amount to pay is "+((rooms[i].rateperday * days) - amount)+"Rs. : ");
                         amount1 = sc1.nextInt();
                         if (amount1 ==0) break;
                         else amount += amount1; 
                         if (amount < (rooms[i].rateperday * days)){
                             System.out.println(
-                                "amount not sufficient. Add another money.add 0 to cancel.");
+                                "amount not sufficient. Add left money or add 0 to cancel payment.");
                         }
                     }while(amount < (rooms[i].rateperday * days));
                     if (amount < (rooms[i].rateperday * days)){
@@ -225,15 +265,30 @@ class RoomManager{
         System.out.println("--------------------------------------------");
     }
     void generateBill(int roomNo){
+        boolean flag = false;
         for(int i=0; i<totalRooms; i++){
             if(rooms[i].roomNo == roomNo){
+                flag = true;
+                if(rooms[i].available){
+                    System.out.println("--------------------------------------------");
+                    System.out.println("Room is not booked by anyone.");
+                    System.out.println("--------------------------------------------");
+                }
+                else
                 rooms[i].generateBill();
             }
         }
+        if(flag == false)
+            System.out.println("room not found!");
     }
     void generalCheck(){
         for(int i=0; i<totalRooms; i++){
             rooms[i].generalCheck();
+        }
+    }
+    void bookFood(int roomNo, String typeOfFood){
+        for(int i=0; i<totalRooms; i++){
+            rooms[i].addFood(typeOfFood);
         }
     }
 }
@@ -241,19 +296,24 @@ class RoomManager{
 
 class Hotel {
     public static void main(String[] args) {
-        RoomManager manager= new RoomManager(10);
-        manager.setRoomDetails(1, 500, false, false, 1);
-        manager.setRoomDetails(2, 1300, true, false, 1);
-        manager.setRoomDetails(3, 1500, true, true, 1);
-        manager.setRoomDetails(4, 1000, false, true, 2);
-        manager.setRoomDetails(5, 700, false, true, 1);
-        manager.setRoomDetails(6, 900, false, false, 2);
-        manager.setRoomDetails(7, 1200, true, false, 2);
-        manager.setRoomDetails(8, 1900, true, true, 2);
-        manager.setRoomDetails(9, 600, false, false, 1);
-        manager.setRoomDetails(10, 2100, true, true, 1);
-
         Scanner sc = new Scanner(System.in);
+        System.out.print("Enter number of rooms in your hotel: ");
+        int totalRooms= sc.nextInt();
+
+        RoomManager manager= new RoomManager(totalRooms);
+        for(int i=1; i<=totalRooms; i++){
+            System.out.print("Enter true if room no. " +i+ " have Ac otherwise false: ");
+            boolean ac = sc.nextBoolean();
+            System.out.print("Enter true if room no. " +i+ " have double bed otherwise false: ");
+            boolean doubleBed = sc.nextBoolean();
+            System.out.print("Enter bed count for room no. " +i+": ");
+            int bedCount = sc.nextInt();
+            System.out.print("Enter rent per day for room no. " +i+": ");
+            int rateperday = sc.nextInt();
+            manager.setRoomDetails(i, rateperday, ac, doubleBed, bedCount);
+            System.out.println("--------------------------------------------");
+        }
+
         int choose = 0;
         int roomNo;
         do {
@@ -263,6 +323,7 @@ class Hotel {
             System.out.println("3 for book room by room no.");
             System.out.println("4 for free room by room no.");
             System.out.println("5 for generate bill by room no.");
+            System.out.println("6 to book food for room no. ");
             System.out.println("9 for exit menu.Any other value to reprint menu");
 
             choose = sc.nextInt();
@@ -340,6 +401,33 @@ class Hotel {
                     roomNo = sc.nextInt();
                     manager.generateBill(roomNo);
                     break;
+                case 6:
+                    System.out.print("Enter room No. to book food: ");
+                    roomNo = sc.nextInt();
+                    int choose3;
+                    System.out.println("--------------------------------------------");
+                    System.out.println("1 for Breakfast 50Rs.");
+                    System.out.println("2 for Lunch 100Rs.");
+                    System.out.println("3 for Dinner 200Rs.");
+                    choose3 = sc.nextInt();
+                    switch (choose3) {
+                        case 1:
+                            manager.bookFood(roomNo, "breakfast");
+                            System.out.println("Breakfast booked for room no. "+ roomNo);
+                            break;
+                        case 2:
+                            manager.bookFood(roomNo, "lunch");
+                            System.out.println("Lunch booked for room no. "+ roomNo);
+                            break;
+                        case 3:
+                            manager.bookFood(roomNo, "dinner");
+                            System.out.println("Dinner booked for room no. "+ roomNo);
+                            break;
+                        default:
+                            System.out.println("Not a valid food type. Food not booked.");
+                            break;
+                    }
+
                 default:
                     System.out.println("--------------------------------------------");
                     break;
